@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+env-file-reader = "0.3.0"
 evdev = "0.13.0"
 
 serialport = "4.7.0"
 
 [[bin]]
 name = "Joystick-driver"
-path = "main.rs"
+path = "driver/main.rs"

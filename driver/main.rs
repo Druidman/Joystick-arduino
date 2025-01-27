@@ -1,13 +1,16 @@
 use serialport::*;
+use env_file_reader::read_file;
 use evdev::{
-    uinput:: {VirtualDevice},
+    uinput::VirtualDevice,
     UinputAbsSetup, AbsInfo, AbsoluteAxisCode, InputEvent, EventType, KeyCode, AttributeSet
 };
 use std::{
     io:: {stdin, stdout, Write},
     thread,
     sync::mpsc,
-    time::Duration
+    time::Duration,
+    collections::HashMap,
+    env
     
 
 };
@@ -17,14 +20,25 @@ struct Axis {
     range: Vec<i32>,
 }
 
-const ARDUINO_PORT_NAME: &str = "/dev/ttyUSB0"; 
+ 
 
 const BUTTONS: [KeyCode; 1] = [
     KeyCode::BTN_SOUTH
 ];
 
 fn main(){
-    let mut port: Box<dyn SerialPort> = serialport::new(ARDUINO_PORT_NAME,9600)
+    let PATH_TO_ENV_FILE = env::current_dir()   
+        .expect("currentdir reading went wrong")
+        .join("driver/.env")
+        .into_os_string()
+        .into_string()
+        .expect("converting path to str went wrong");
+    println!("{:?}",PATH_TO_ENV_FILE);
+    let env_variables: HashMap<String, String> = read_file(PATH_TO_ENV_FILE).expect("reading env file went wrong");
+    let arduino_port_name: String = env_variables["ARDUINO_PORT"].clone();
+    println!("{:?}",arduino_port_name);
+
+    let mut port: Box<dyn SerialPort> = serialport::new(arduino_port_name,9600)
         .open()
         .expect("No such device");
 
