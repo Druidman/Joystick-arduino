@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+eframe = "0.30.0"
+egui = "0.30.0"
 env-file-reader = "0.3.0"
 evdev = "0.13.0"
 

@@ -10,14 +10,19 @@ use std::{
     sync::mpsc,
     time::Duration,
     collections::HashMap,
-    env
+    env,
+    cmp,
+    process::Command
     
 
 };
 
+
+
+
 struct Axis {
     code: AbsoluteAxisCode,
-    range: Vec<i32>,
+    range: [i32;2]
 }
 
  
@@ -26,17 +31,10 @@ const BUTTONS: [KeyCode; 1] = [
     KeyCode::BTN_SOUTH
 ];
 
+
 fn main(){
-    let PATH_TO_ENV_FILE = env::current_dir()   
-        .expect("currentdir reading went wrong")
-        .join("driver/.env")
-        .into_os_string()
-        .into_string()
-        .expect("converting path to str went wrong");
-    println!("{:?}",PATH_TO_ENV_FILE);
-    let env_variables: HashMap<String, String> = read_file(PATH_TO_ENV_FILE).expect("reading env file went wrong");
-    let arduino_port_name: String = env_variables["ARDUINO_PORT"].clone();
-    println!("{:?}",arduino_port_name);
+
+    let arduino_port_name = getArduinoDevicePath();
 
     let mut port: Box<dyn SerialPort> = serialport::new(arduino_port_name,9600)
         .open()
@@ -52,7 +50,7 @@ fn main(){
 
     
     for axis in &axes {
-        let abs_axis_info = AbsInfo::new(0, axis.range[0], axis.range[1], 0, 0, 1);
+        let abs_axis_info = AbsInfo::new(0, axis.range[0], axis.range[1], 2, 0, 1);
         let abs_axis = UinputAbsSetup::new(axis.code,abs_axis_info);
         device = device
             .with_absolute_axis(&abs_axis)
@@ -96,14 +94,24 @@ fn main(){
         let input_event = InputEvent::new(EventType::KEY.0,KeyCode::BTN_SOUTH.0,1);
         let _ = sender.send(input_event)
             .expect("send went wrong");
-    
-
-        
-        
-   
     }
 }
 
+fn getArduinoDevicePath() -> String{
+    let ports = Command::new("sh")
+        .arg("-c")
+        .arg("ls /dev/ttyUSB*")
+        .output()
+        .expect("ls command failed");
+    let results = String::from_utf8(ports.stdout).expect("stdout went wrong");
+    let resVec: Vec<&str> = results.split("\n").collect();
+
+    println!("{}",results);
+    println!("Select Device number(index): ");
+    let choice: usize = read_input_line().trim().parse().expect("bad parse");
+    resVec[choice].to_string()
+    
+}
 fn emit_device(mut device: VirtualDevice, receiver: mpsc::Receiver<InputEvent>){
     loop {
         let Ok(input_events) = receiver.recv() else {
@@ -149,22 +157,33 @@ fn setup_axes(port: &mut Box<dyn SerialPort>) -> [Axis; 2]{
     println!("{:?}", pitch_up_limit);
     println!("Setup finished!");
 
+
+
     return [
         Axis {
   
             code: AbsoluteAxisCode::ABS_X,
-            range: vec![roll_left_limit,roll_right_limit]
+            range: minmax(roll_left_limit,roll_right_limit)
+   
             
         },
         Axis {
  
             code: AbsoluteAxisCode::ABS_Y,
-            range: vec![pitch_up_limit,pitch_down_limit]
+            range: minmax(pitch_down_limit,pitch_up_limit)
+            
         }
     ];
     
 
 
+}
+
+fn minmax<T: cmp::Ord + Copy>(v1: T,v2: T) -> [T;2]{
+    return [
+        cmp::min(v1,v2),
+        cmp::max(v1,v2)
+    ];
 }
 
 fn read_input_line() -> String{

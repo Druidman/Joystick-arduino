@@ -9,7 +9,6 @@ void setup() {
   Serial.begin(9600);
   pinMode(axisY,INPUT);
   pinMode(axisX,INPUT);
-  pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
 
 }
